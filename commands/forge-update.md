@@ -42,7 +42,7 @@ REPO_PATH=$(cd -P "$(readlink "$HOME/.claude/agents")" 2>/dev/null && cd .. && p
 ```
 Claude Forge 저장소를 찾을 수 없습니다.
 다시 clone 후 install.sh를 실행하세요:
-  git clone https://github.com/sangrokjung/claude-forge.git
+  git clone https://github.com/daeha76/claude-forge.git
   cd claude-forge && ./install.sh
 ```
 

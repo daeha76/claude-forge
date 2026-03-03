@@ -11,10 +11,10 @@
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/LICENSE-MIT-blue?style=for-the-badge" alt="MIT License"></a>
   <a href="https://claude.com/claude-code"><img src="https://img.shields.io/badge/CLAUDE_CODE-%E2%89%A51.0-blueviolet?style=for-the-badge" alt="Claude Code"></a>
-  <a href="https://github.com/sangrokjung/claude-forge/stargazers"><img src="https://img.shields.io/github/stars/sangrokjung/claude-forge?style=for-the-badge&color=yellow" alt="Stars"></a>
-  <a href="https://github.com/sangrokjung/claude-forge/network/members"><img src="https://img.shields.io/github/forks/sangrokjung/claude-forge?style=for-the-badge&color=orange" alt="Forks"></a>
-  <a href="https://github.com/sangrokjung/claude-forge/graphs/contributors"><img src="https://img.shields.io/github/contributors/sangrokjung/claude-forge?style=for-the-badge&color=green" alt="Contributors"></a>
-  <a href="https://github.com/sangrokjung/claude-forge/commits/main"><img src="https://img.shields.io/github/last-commit/sangrokjung/claude-forge?style=for-the-badge" alt="Last Commit"></a>
+  <a href="https://github.com/daeha76/claude-forge/stargazers"><img src="https://img.shields.io/github/stars/daeha76/claude-forge?style=for-the-badge&color=yellow" alt="Stars"></a>
+  <a href="https://github.com/daeha76/claude-forge/network/members"><img src="https://img.shields.io/github/forks/daeha76/claude-forge?style=for-the-badge&color=orange" alt="Forks"></a>
+  <a href="https://github.com/daeha76/claude-forge/graphs/contributors"><img src="https://img.shields.io/github/contributors/daeha76/claude-forge?style=for-the-badge&color=green" alt="Contributors"></a>
+  <a href="https://github.com/daeha76/claude-forge/commits/main"><img src="https://img.shields.io/github/last-commit/daeha76/claude-forge?style=for-the-badge" alt="Last Commit"></a>
 </p>
 
 <p align="center">
@@ -41,19 +41,24 @@ Claude Forge is an open-source development environment for Claude Code that prov
 
 ```bash
 # 1. Clone
-git clone --recurse-submodules https://github.com/sangrokjung/claude-forge.git
+git clone --recurse-submodules https://github.com/daeha76/claude-forge.git
 cd claude-forge
 
-# 2. Install (creates symlinks to ~/.claude)
+# 2. Install (macOS / Linux)
 ./install.sh
+
+# 2. Install (Windows PowerShell)
+.\install.ps1
 
 # 3. Launch Claude Code
 claude
 ```
 
-`install.sh` symlinks everything to `~/.claude/`, so `git pull` updates instantly.
+Both wrappers automatically install `dotnet-script` if missing, then run `install.csx`.
+On macOS/Linux, symlinks are used so `git pull` updates everything instantly.
+On Windows, files are copied — re-run `install.ps1` after `git pull`.
 
-> If you find Claude Forge useful, please consider giving it a [star](https://github.com/sangrokjung/claude-forge/stargazers) -- it helps others discover this project.
+> If you find Claude Forge useful, please consider giving it a [star](https://github.com/daeha76/claude-forge/stargazers) -- it helps others discover this project.
 
 ### New here?
 
@@ -197,51 +202,90 @@ Most developers either use Claude Code with no customization or spend hours asse
 
 ### Prerequisites
 
-| Dependency | Version | Check |
-|:-----------|:--------|:------|
-| Node.js | v22+ | `node -v` |
-| Git | any | `git --version` |
-| jq | any (macOS/Linux) | `jq --version` |
-| Claude Code CLI | ≥1.0 | `claude --version` |
+| Dependency | Required | Notes |
+|:-----------|:--------:|:------|
+| Node.js | ✅ | For MCP servers (npx) |
+| Git | ✅ | Clone, submodules |
+| Claude Code CLI | ✅ | `claude` command |
+| .NET SDK | ✅ | Runs `install.csx` + .NET project creation |
+| dotnet-script | auto-installed | C# script engine |
 
-### macOS / Linux
+### All Platforms (Windows / macOS / Linux)
+
+All logic lives in a single C# script — `install.csx`.
 
 ```bash
-git clone --recurse-submodules https://github.com/sangrokjung/claude-forge.git
+# macOS / Linux
+git clone --recurse-submodules https://github.com/daeha76/claude-forge.git
 cd claude-forge
-./install.sh
+chmod +x install.sh && ./install.sh
+
+# Windows (PowerShell)
+git clone --recurse-submodules https://github.com/daeha76/claude-forge.git
+cd claude-forge
+.\install.ps1
+
+# Or run directly on any platform (requires dotnet-script)
+dotnet script install.csx
 ```
+
+> `dotnet-script` is installed automatically if missing.
+> Manual install: `dotnet tool install -g dotnet-script`
 
 The installer:
-1. Checks dependencies (node, git, jq)
-2. Initializes git submodules (CC CHIPS status bar)
+1. Checks dependencies (node, git, dotnet)
+2. Initializes git submodules (CC CHIPS)
 3. Backs up existing `~/.claude/` if present
-4. Creates **symlinks** for 7 directories + `settings.json` to `~/.claude/`
+4. Creates **symlinks** (macOS/Linux) or **copies** (Windows) to `~/.claude/`
 5. Applies CC CHIPS custom overlay
 6. Optionally installs MCP servers and external skills
-7. Adds shell aliases (`cc` → `claude`, `ccr` → `claude --resume`)
+7. Adds shell aliases (`cc` → `claude`, `ccr` → `claude --resume`) — macOS/Linux only
 
-Because it uses symlinks, `git pull` in the repo updates everything instantly.
+### Create a New .NET Project
 
-### Windows
+```bash
+# macOS / Linux
+./install.sh MyApp
 
-```powershell
-# Run PowerShell as Administrator
-.\install.ps1
+# Windows
+.\install.ps1 MyApp
+
+# Or directly (any platform)
+dotnet script install.csx -- MyApp
+
+# Specify a custom location
+dotnet script install.csx -- MyApp D:\projects
 ```
 
-Windows uses **file copies** instead of symlinks. Re-run `install.ps1` after `git pull` to update.
+This scaffolds a full .NET Clean Architecture solution next to the claude-forge folder:
+
+```
+MyApp/
+  src/
+    MyApp.Domain/          # Entities, value objects
+    MyApp.Application/     # Use cases, interfaces
+    MyApp.Infrastructure/  # DB, external services
+    MyApp.Api/             # ASP.NET Core Web API
+    MyApp.Web/             # Blazor Auto frontend
+    MyApp.AppHost/         # .NET Aspire orchestrator
+  tests/
+    MyApp.Domain.Tests/
+    MyApp.Application.Tests/
+  .claude/                 # Claude Forge features (copied)
+  CLAUDE.md                # Project context for Claude
+  run.csx                  # Start dev server
+```
 
 ### MCP Server Setup
 
-| Server | API Key | Setup |
+| Server | API Key | Notes |
 |:-------|:--------|:------|
-| **context7** | Not required | Auto-installed via `install.sh` |
-| **memory** | Not required | Auto-installed via `install.sh` |
-| **fetch** | Not required | Requires `uvx` (Python) |
-| **jina-reader** | Not required | Auto-installed via `install.sh` |
-| **exa** | OAuth | `claude mcp add exa --url https://mcp.exa.ai/mcp` |
-| **github** | PAT | Set `GITHUB_PERSONAL_ACCESS_TOKEN` env var |
+| **context7** | No | Real-time library docs |
+| **memory** | No | Persistent knowledge graph |
+| **playwright** | No | Browser automation |
+| **sequential-thinking** | No | Step-by-step reasoning |
+| **github** | `GITHUB_PERSONAL_ACCESS_TOKEN` | Repo / PR / Issues |
+| **supabase** | Supabase URL/Key | Direct DB integration |
 
 ### Customization
 
@@ -277,7 +321,7 @@ graph TB
         SET["settings.json"]
     end
 
-    INSTALL["./install.sh"]
+    INSTALL["install.csx"]
     REPO --> INSTALL
 
     subgraph HOME["~/.claude/ (symlinked)"]
@@ -319,8 +363,9 @@ claude-forge/
   ├── scripts/              Utility scripts
   ├── setup/                Installation guides + templates
   ├── skills/               Multi-step skill workflows (15)
-  ├── install.sh            macOS/Linux installer (symlinks)
-  ├── install.ps1           Windows installer (copies)
+  ├── install.csx           Cross-platform C# install script (main logic)
+  ├── install.sh            macOS/Linux wrapper → install.csx
+  ├── install.ps1           Windows wrapper → install.csx
   ├── mcp-servers.json      MCP server configurations
   ├── settings.json         Claude Code settings
   ├── CONTRIBUTING.md       Contribution guide
@@ -591,7 +636,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on adding agents, commands
 ## Use Claude Forge? Show it!
 
 ```markdown
-[![Built with Claude Forge](https://img.shields.io/badge/Built_with-Claude_Forge-orange?style=flat-square)](https://github.com/sangrokjung/claude-forge)
+[![Built with Claude Forge](https://img.shields.io/badge/Built_with-Claude_Forge-orange?style=flat-square)](https://github.com/daeha76/claude-forge)
 ```
 
 Add this badge to your project's README to let others know you use Claude Forge.
@@ -600,8 +645,8 @@ Add this badge to your project's README to let others know you use Claude Forge.
 
 ## Contributors
 
-<a href="https://github.com/sangrokjung/claude-forge/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=sangrokjung/claude-forge" />
+<a href="https://github.com/daeha76/claude-forge/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=daeha76/claude-forge" />
 </a>
 
 ---
@@ -610,7 +655,7 @@ Add this badge to your project's README to let others know you use Claude Forge.
 
 [MIT](LICENSE) -- use it, fork it, build on it.
 
-If Claude Forge improved your workflow, a [star](https://github.com/sangrokjung/claude-forge/stargazers) helps others find it too.
+If Claude Forge improved your workflow, a [star](https://github.com/daeha76/claude-forge/stargazers) helps others find it too.
 
 ---
 

@@ -5,7 +5,7 @@
 If you discover a security vulnerability in Claude Forge, please report it responsibly:
 
 1. **Do NOT** open a public issue
-2. Email: Open a private security advisory on [GitHub](https://github.com/sangrokjung/claude-forge/security/advisories/new)
+2. Email: Open a private security advisory on [GitHub](https://github.com/daeha76/claude-forge/security/advisories/new)
 3. Include:
    - Description of the vulnerability
    - Steps to reproduce

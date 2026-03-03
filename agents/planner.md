@@ -1,4 +1,4 @@
-# Part of Claude Forge — github.com/sangrokjung/claude-forge
+# Part of Claude Forge — github.com/daeha76/claude-forge
 ---
 name: planner
 description: Expert planning specialist for complex features and refactoring. Use PROACTIVELY when users request feature implementation, architectural changes, or complex refactoring. Automatically activated for planning tasks.

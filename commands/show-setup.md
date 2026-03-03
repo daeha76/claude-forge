@@ -54,7 +54,7 @@ Rules:    XX
 
 추천 다음 작업: [커맨드]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-github.com/sangrokjung/claude-forge
+github.com/daeha76/claude-forge
 ```
 
 ## Clipboard

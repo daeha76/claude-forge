@@ -214,7 +214,7 @@ winget install --id Git.Git --accept-source-agreements --accept-package-agreemen
 **저장소 복제:**
 ```powershell
 cd $env:USERPROFILE
-git clone https://github.com/sangrokjung/claude-forge.git
+git clone https://github.com/daeha76/claude-forge.git
 cd claude-forge\setup
 ```
 
@@ -593,7 +593,7 @@ tmux list-sessions
 **원인**: SSH 키가 GitHub에 등록되지 않았거나 HTTPS를 사용해야 함
 **해결**: 초기 설정 시에는 HTTPS 방식으로 clone:
 ```powershell
-git clone https://github.com/sangrokjung/claude-forge.git
+git clone https://github.com/daeha76/claude-forge.git
 ```
 SSH 방식은 GitHub에 SSH 키를 등록한 후 사용 가능합니다.
 

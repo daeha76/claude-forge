@@ -23,7 +23,7 @@ Thank you for your interest in contributing to Claude Forge!
 **File structure:**
 
 ```markdown
-# Part of Claude Forge — github.com/sangrokjung/claude-forge
+# Part of Claude Forge — github.com/daeha76/claude-forge
 ---
 name: my-agent
 description: One-line description of the agent's purpose
@@ -137,4 +137,4 @@ Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`, `ci`
 
 ## Questions?
 
-Open an issue on [GitHub](https://github.com/sangrokjung/claude-forge/issues).
+Open an issue on [GitHub](https://github.com/daeha76/claude-forge/issues).

@@ -1,4 +1,4 @@
-# Part of Claude Forge — github.com/sangrokjung/claude-forge
+# Part of Claude Forge — github.com/daeha76/claude-forge
 ---
 name: architect
 description: Software architecture specialist for system design, scalability, and technical decision-making. Use PROACTIVELY when planning new features, refactoring large systems, or making architectural decisions.

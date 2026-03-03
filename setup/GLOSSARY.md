@@ -320,4 +320,4 @@ TDD의 3단계 사이클입니다.
 
 ---
 
-> 이 문서에서 설명하지 않은 용어가 있다면, [GitHub Issues](https://github.com/sangrokjung/claude-forge/issues)에서 문의하세요.
+> 이 문서에서 설명하지 않은 용어가 있다면, [GitHub Issues](https://github.com/daeha76/claude-forge/issues)에서 문의하세요.
