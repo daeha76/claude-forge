@@ -250,11 +250,16 @@ The installer:
 # Windows
 .\install.ps1 MyApp
 
-# Or directly (any platform)
-dotnet script install.csx -- MyApp
+# Specify a custom location (macOS / Linux)
+./install.sh MyApp ~/Desktop
+# → /Users/yourname/Desktop/MyApp
 
-# Specify a custom location
-dotnet script install.csx -- MyApp D:\projects
+# Specify a custom location (Windows)
+.\install.ps1 MyApp D:\\projects
+# → D:\projects\MyApp
+
+# Or directly (any platform)
+dotnet script install.csx -- MyApp D:\\projects
 ```
 
 This scaffolds a full .NET Clean Architecture solution next to the claude-forge folder:

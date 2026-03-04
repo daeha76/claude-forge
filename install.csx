@@ -733,14 +733,12 @@ var root    = Path.GetDirectoryName(Environment.GetCommandLineArgs()
 var appHost = Path.Combine(root, "src", "{name}.AppHost");
 
 Console.WriteLine("{name} AppHost 시작 중...");
-Console.WriteLine($"경로: {{appHost}}");
+Console.WriteLine("경로: " + appHost);
 Console.WriteLine();
 
-var psi = new ProcessStartInfo("dotnet", "run")
-{{
-    WorkingDirectory = appHost,
-    UseShellExecute  = false,
-}};
+var psi = new ProcessStartInfo("dotnet", "run");
+psi.WorkingDirectory = appHost;
+psi.UseShellExecute  = false;
 using var p = Process.Start(psi)!;
 p.WaitForExit();
 """, Encoding.UTF8);
