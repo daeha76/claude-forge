@@ -1,29 +1,25 @@
 name: Update Knowledge Base
 
 on:
-  # 매주 월요일 오전 9시 (KST = UTC+9, 즉 UTC 00:00)
   schedule:
     - cron: '0 0 * * 1'
-
-  # 수동 트리거 (Actions 탭에서 "Run workflow" 버튼)
   workflow_dispatch:
     inputs:
       mode:
-        description: '갱신 범위'
+        description: '갱신 범위 (stale=30일 초과, all=전체)'
         required: true
         default: 'stale'
         type: choice
         options:
-          - stale       # 30일 이상 된 항목만
-          - all         # 전체 강제 갱신
+          - stale
+          - all
 
 jobs:
   update:
     name: Refresh knowledge summaries
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # 커밋용
-      pull-requests: write
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -33,195 +29,37 @@ jobs:
         with:
           node-version: '22'
 
-      # knowledge/index.json 파싱 후 stale URL 목록 추출
       - name: Find stale entries
         id: find-stale
         run: |
           MODE="${{ github.event.inputs.mode || 'stale' }}"
-          TODAY=$(date +%Y-%m-%d)
-          CUTOFF=$(date -d "30 days ago" +%Y-%m-%d 2>/dev/null || \
-                   date -v-30d +%Y-%m-%d)  # macOS 호환
-
-          # stale 항목 추출 (internal 제외)
-          if [ "$MODE" = "all" ]; then
-            ENTRIES=$(node -e "
-              const idx = require('./knowledge/index.json');
-              const stale = idx.entries.filter(e => e.source_type !== 'internal');
-              console.log(JSON.stringify(stale));
-            ")
-          else
-            ENTRIES=$(node -e "
-              const idx = require('./knowledge/index.json');
-              const cutoff = new Date('$CUTOFF');
-              const stale = idx.entries.filter(e =>
-                e.source_type !== 'internal' &&
-                new Date(e.date) < cutoff
-              );
-              console.log(JSON.stringify(stale));
-            ")
-          fi
-
-          COUNT=$(echo $ENTRIES | node -e "
-            let d=''; process.stdin.on('data',c=>d+=c);
-            process.stdin.on('end',()=>console.log(JSON.parse(d).length));
-          ")
-
-          echo "stale_count=$COUNT" >> $GITHUB_OUTPUT
-          echo "entries=$ENTRIES" >> $GITHUB_OUTPUT
+          ENTRIES=$(node scripts/update-knowledge/find-stale.js "$MODE" 30)
+          COUNT=$(echo "$ENTRIES" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>console.log(JSON.parse(d).length));")
+          echo "stale_count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "entries=$ENTRIES" >> "$GITHUB_OUTPUT"
           echo "Found $COUNT stale entries"
 
       - name: Skip if nothing to update
         if: steps.find-stale.outputs.stale_count == '0'
-        run: |
-          echo "모든 항목이 최신 상태입니다. 갱신 불필요."
-          exit 0
+        run: echo "모든 항목이 최신 상태입니다."
 
-      # Claude API로 각 URL 재요약
       - name: Refresh summaries via Claude API
         if: steps.find-stale.outputs.stale_count != '0'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          TODAY=$(date +%Y-%m-%d)
-
-          node << 'EOF'
-          const fs = require('fs');
-          const https = require('https');
-
-          const entries = JSON.parse(process.env.ENTRIES || '[]');
-          const today = new Date().toISOString().split('T')[0];
-
-          async function fetchUrl(url) {
-            return new Promise((resolve) => {
-              const req = https.get(url, { timeout: 15000 }, (res) => {
-                let body = '';
-                res.on('data', d => body += d);
-                res.on('end', () => resolve(body.substring(0, 8000)));
-              });
-              req.on('error', () => resolve(null));
-              req.on('timeout', () => { req.destroy(); resolve(null); });
-            });
-          }
-
-          async function summarizeWithClaude(title, url, content) {
-            const payload = JSON.stringify({
-              model: 'claude-haiku-4-5-20251001',
-              max_tokens: 1024,
-              messages: [{
-                role: 'user',
-                content: `다음 웹 페이지 내용을 3~5단락으로 요약해 주세요.
-          제목: ${title}
-          URL: ${url}
-
-          내용:
-          ${content}
-
-          요약 형식:
-          [3~5단락 요약]
-
-          ## 핵심 포인트
-          - [포인트 1]
-          - [포인트 2]
-          - [포인트 3]`
-              }]
-            });
-
-            return new Promise((resolve, reject) => {
-              const options = {
-                hostname: 'api.anthropic.com',
-                path: '/v1/messages',
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'x-api-key': process.env.ANTHROPIC_API_KEY,
-                  'anthropic-version': '2023-06-01',
-                  'Content-Length': Buffer.byteLength(payload)
-                }
-              };
-
-              const req = https.request(options, (res) => {
-                let body = '';
-                res.on('data', d => body += d);
-                res.on('end', () => {
-                  try {
-                    const parsed = JSON.parse(body);
-                    resolve(parsed.content?.[0]?.text || '');
-                  } catch { resolve(''); }
-                });
-              });
-              req.on('error', reject);
-              req.write(payload);
-              req.end();
-            });
-          }
-
-          async function main() {
-            const idxPath = './knowledge/index.json';
-            const idx = JSON.parse(fs.readFileSync(idxPath, 'utf8'));
-            let updated = 0, failed = 0;
-
-            for (const entry of entries) {
-              console.log(`처리 중: ${entry.id}`);
-
-              const content = await fetchUrl(entry.source_url);
-              if (!content) {
-                console.log(`  ❌ 접근 불가: ${entry.source_url}`);
-                failed++;
-                continue;
-              }
-
-              const summary = await summarizeWithClaude(entry.title, entry.source_url, content);
-              if (!summary) {
-                console.log(`  ❌ 요약 실패: ${entry.id}`);
-                failed++;
-                continue;
-              }
-
-              // 파일 업데이트
-              const fileContent = `---
-          title: "${entry.title}"
-          source_type: ${entry.source_type}
-          source_url: ${entry.source_url}
-          date: ${today}
-          tags: [${entry.tags.join(', ')}]
-          ---
-
-          ${summary}
-          `;
-              fs.writeFileSync(`./knowledge/${entry.file}`, fileContent);
-
-              // index.json date 업데이트
-              const idxEntry = idx.entries.find(e => e.id === entry.id);
-              if (idxEntry) idxEntry.date = today;
-
-              console.log(`  ✅ 완료: ${entry.id}`);
-              updated++;
-
-              // API 레이트리밋 회피
-              await new Promise(r => setTimeout(r, 1000));
-            }
-
-            fs.writeFileSync(idxPath, JSON.stringify(idx, null, 2) + '\n');
-            console.log(`\n완료 — 갱신: ${updated}, 실패: ${failed}`);
-          }
-
-          main().catch(console.error);
-          EOF
-        env:
           ENTRIES: ${{ steps.find-stale.outputs.entries }}
+        run: node scripts/update-knowledge/refresh.js
 
-      # 변경사항 자동 커밋
       - name: Commit updated knowledge
+        if: steps.find-stale.outputs.stale_count != '0'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
           git add knowledge/
           if git diff --staged --quiet; then
             echo "변경사항 없음"
           else
             COUNT="${{ steps.find-stale.outputs.stale_count }}"
-            git commit -m "chore: knowledge 자동 갱신 ($COUNT개, $(date +%Y-%m-%d))"
+            git commit -m "chore: knowledge 자동 갱신 (${COUNT}개, $(date +%Y-%m-%d))"
             git push
-            echo "✅ 커밋 완료"
           fi

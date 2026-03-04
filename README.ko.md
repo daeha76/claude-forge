@@ -1,32 +1,47 @@
 <p align="center">
-  <strong>Claude Code를 위한 프로덕션 수준 설정 프레임워크</strong>
+  <strong>C# / .NET 10 + Blazor Auto 특화 Claude Code 개발 프레임워크</strong>
 </p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/LICENSE-MIT-blue?style=for-the-badge" alt="MIT License"></a>
   <a href="https://claude.com/claude-code"><img src="https://img.shields.io/badge/CLAUDE_CODE-%E2%89%A51.0-blueviolet?style=for-the-badge" alt="Claude Code"></a>
-  <a href="https://github.com/daeha76/claude-forge/stargazers"><img src="https://img.shields.io/github/stars/daeha76/claude-forge?style=for-the-badge&color=yellow" alt="Stars"></a>
-  <a href="https://github.com/daeha76/claude-forge/network/members"><img src="https://img.shields.io/github/forks/daeha76/claude-forge?style=for-the-badge&color=orange" alt="Forks"></a>
-  <a href="https://github.com/daeha76/claude-forge/graphs/contributors"><img src="https://img.shields.io/github/contributors/daeha76/claude-forge?style=for-the-badge&color=green" alt="Contributors"></a>
-  <a href="https://github.com/daeha76/claude-forge/commits/main"><img src="https://img.shields.io/github/last-commit/daeha76/claude-forge?style=for-the-badge" alt="Last Commit"></a>
+  <a href="https://dotnet.microsoft.com/download/dotnet/10.0"><img src="https://img.shields.io/badge/.NET-10.0-512BD4?style=for-the-badge&logo=dotnet" alt=".NET 10"></a>
+  <a href="https://github.com/daeha76/claude-forge"><img src="https://img.shields.io/badge/based_on-claude--forge-orange?style=for-the-badge" alt="Based on claude-forge"></a>
 </p>
 
 <p align="center">
   <a href="#-빠른-시작">빠른 시작</a> &bull;
-  <a href="#-개발-워크플로우">개발 워크플로우</a> &bull;
-  <a href="#-구성-요소">구성 요소</a> &bull;
-  <a href="#-설치-가이드">설치 가이드</a> &bull;
-  <a href="#-아키텍처">아키텍처</a> &bull;
+  <a href="#-net-프로젝트에서-기능-개발하기">.NET 개발 가이드</a> &bull;
+  <a href="#-배포">배포</a> &bull;
+  <a href="#-개발-워크플로우">워크플로우</a> &bull;
+  <a href="#-설치-가이드">설치</a> &bull;
   <a href="README.md">English</a>
 </p>
 
 ---
 
-## Claude Forge란?
+## dotnet-claude-forge란?
 
-Claude Forge는 **Claude Code**를 기본 CLI에서 **완전한 개발 환경**으로 변환합니다. 설치 한 번으로 **11개 전문 에이전트**(Opus 6 + Sonnet 5), **36개 슬래시 커맨드**, **15개 스킬 워크플로우**, **14개 자동화 훅**(보안 6 + 유틸리티 8), **8개 규칙 파일**, **6개 MCP 서버**가 모두 연결되어 즉시 사용 가능합니다.
+**dotnet-claude-forge**는 [claude-forge](https://github.com/daeha76/claude-forge)를 **.NET 10 / Blazor Auto / Clean Architecture** 환경에 최적화한 포크입니다.
 
-> oh-my-zsh가 터미널을 강화하듯, Claude Forge는 AI 코딩 어시스턴트를 **파워 유저 도구**로 업그레이드합니다.
+Claude Code를 기본 CLI에서 **완전한 .NET 개발 환경**으로 변환합니다. 설치 한 번으로 **11개 전문 에이전트**, **36개+ 슬래시 커맨드**, **.NET 전용 검증 스킬**(Blazor/EF/Clean Arch), **Azure & Docker 배포 자동화**, **14개 자동화 훅**이 즉시 사용 가능합니다.
+
+> oh-my-zsh가 터미널을 강화하듯, dotnet-claude-forge는 AI 코딩 어시스턴트를 **.NET 파워 유저 도구**로 업그레이드합니다.
+
+### 원본(claude-forge) 대비 추가된 것
+
+| 추가 항목 | 내용 |
+|:---------|:-----|
+| `skills/verify-blazor` | `.razor` 컴포넌트 구조·DI·렌더모드 검증 |
+| `skills/verify-ef-migration` | EF Core 마이그레이션 안전성 검사 |
+| `skills/verify-clean-arch` | Clean Architecture 레이어 의존성 위반 탐지 |
+| `skills/verify-deployment` | Dockerfile·헬스체크·환경변수 노출 검사 |
+| `commands/deploy.md` | Azure ↔ Docker 배포 전환 가이드 |
+| `Dockerfile` | 멀티스테이지 빌드 (Azure/Docker 공통) |
+| `infra/docker/` | docker-compose + nginx (Blazor SignalR 최적화) |
+| `setup/github-workflows/` | dotnet-ci, deploy-azure, deploy-docker 템플릿 |
+| `.github/workflows/update-knowledge.yml` | knowledge 주간 자동 갱신 |
+| `devcontainer` | .NET 10 + dotnet-ef 자동 설치 |
 
 ---
 
@@ -224,17 +239,12 @@ chmod +x install.sh && ./install.sh
 
 ### .NET 신규 프로젝트 생성
 
-Claude Forge 설치 없이 새 .NET 프로젝트만 생성할 수도 있습니다:
-
 ```bash
 # macOS / Linux
 ./install.sh --AppName MyApp
 
 # Windows
 .\install.ps1 -AppName MyApp
-
-# 또는 직접 (플랫폼 무관)
-dotnet script install.csx -- --AppName MyApp --ParentDir D:\projects
 ```
 
 생성 결과 (Clean Architecture):
@@ -245,12 +255,140 @@ MyApp/
     MyApp.Application/      # 유스케이스, 인터페이스
     MyApp.Infrastructure/   # DB, 외부 서비스
     MyApp.Api/              # ASP.NET Core Web API
-    MyApp.Web/              # Blazor WebAssembly
+    MyApp.Web/              # Blazor Auto
   tests/
     MyApp.Domain.Tests/
     MyApp.Application.Tests/
-  *.sln, Directory.Build.props, .gitignore, README.md
+    MyApp.Architecture.Tests/   # 레이어 의존성 자동 검증
+  *.sln, Directory.Build.props, .gitignore
 ```
+
+---
+
+## 💻 .NET 프로젝트에서 기능 개발하기
+
+### 프로젝트 초기화 (최초 1회)
+
+```bash
+cd ~/MyApp   # .NET 프로젝트 폴더
+claude       # Claude Code 실행
+```
+
+```
+/init-project MyApp --type dotnet
+```
+
+`CLAUDE.md`, `spec.md`, `prompt_plan.md`가 자동 생성됩니다.
+
+### 기능 개발 — 두 가지 방법
+
+#### 방법 1: 원버튼 자동화 (추천)
+
+```
+/auto 이메일+비밀번호 로그인 기능. Supabase Auth 사용. JWT를 HttpOnly 쿠키로 저장.
+```
+
+`plan → tdd → code-review → handoff-verify → commit-push-pr` 파이프라인이 자동 실행됩니다.
+
+#### 방법 2: 단계별 제어
+
+```
+/plan 로그인 기능 구현
+```
+
+계획 확인 후:
+
+```
+/tdd
+/handoff-verify --security   # 인증 관련 → 보안 검사 포함
+/commit-push-pr
+```
+
+### 실제 파일 생성 위치 예시 (로그인 기능)
+
+```
+src/
+├── Domain/Users/
+│   ├── User.cs                        # 엔티티
+│   └── ValueObjects/Email.cs          # 이메일 값 객체
+├── Application/Auth/Login/
+│   ├── LoginCommand.cs                # CQRS Command
+│   └── LoginCommandHandler.cs
+├── Infrastructure/Auth/
+│   └── SupabaseAuthService.cs
+├── Api/Controllers/
+│   └── AuthController.cs              # POST /api/v1/auth/login
+└── Web/Pages/Auth/
+    └── LoginPage.razor                # Blazor 로그인 화면
+
+tests/
+├── Application.Tests/Auth/
+│   └── LoginCommandHandlerTests.cs
+└── Api.Tests/Auth/
+    └── AuthControllerTests.cs
+```
+
+> `rules/` 폴더에 Clean Architecture, Blazor, 보안 규칙이 정의되어 있어 별도 지시 없이도 올바른 레이어에 올바른 패턴으로 파일이 생성됩니다.
+
+### 효과적인 지시 방법
+
+| 좋은 예 | 피할 표현 |
+|:--------|:---------|
+| `Supabase Auth 사용해서 이메일 로그인, JWT는 HttpOnly 쿠키로` | `로그인 만들어줘` |
+| `로그인 실패 시 Result 패턴으로 에러 반환, Exception 사용 금지` | `에러 처리도 해줘` |
+| `Blazor LoginPage에서 /api/v1/auth/login 호출` | `화면도 만들어줘` |
+
+### .NET 전용 검증 커맨드
+
+```bash
+/verify-blazor          # .razor 컴포넌트 구조 검증
+/verify-ef-migration    # EF Core 마이그레이션 안전성 검사
+/verify-clean-arch      # Clean Architecture 레이어 위반 탐지
+/verify-deployment      # 배포 전 Dockerfile/헬스체크/환경변수 검사
+```
+
+---
+
+## 🚀 배포
+
+Azure App Service와 Self-hosted Docker 중 선택하거나 중간에 전환할 수 있습니다.
+
+```
+/deploy status          # 현재 배포 설정 확인
+/deploy azure           # Azure 배포 가이드
+/deploy docker          # Self-hosted Docker 가이드
+/deploy switch azure    # Docker → Azure 전환 체크리스트
+/deploy switch docker   # Azure → Docker 전환 체크리스트
+```
+
+### GitHub Actions 워크플로우 템플릿
+
+`setup/github-workflows/`에 복사해서 사용하는 템플릿이 있습니다:
+
+```bash
+# 실제 .NET 프로젝트에서
+cp setup/github-workflows/*.yml .github/workflows/
+```
+
+| 파일 | 용도 |
+|:-----|:-----|
+| `dotnet-ci.yml` | PR마다 빌드·테스트·포맷 검사 |
+| `deploy-azure.yml` | Staging → Production 슬롯 스왑 (무중단) |
+| `deploy-docker.yml` | SSH 롤링 배포 |
+
+### Azure vs Self-hosted 비교
+
+| 항목 | Azure App Service | Self-hosted Docker |
+|:-----|:-----------------|:------------------|
+| 로드밸런싱 | Azure가 자동 처리 | nginx + docker compose |
+| 스케일 아웃 | 포털/CLI에서 인스턴스 수 조정 | `docker compose up --scale app=3` |
+| Blazor 스티키 세션 | ARR Affinity 활성화 | nginx `ip_hash` |
+| SSL | Azure 자동 관리 | Let's Encrypt + Certbot |
+| 비용 | Standard S2+ (슬롯 스왑) | 서버 직접 관리 |
+
+### 전환 시 변경 사항
+
+Dockerfile 하나가 양쪽에서 동일하게 사용되므로 **코드 변경 없이** 워크플로우 파일과 GitHub Secrets만 교체하면 됩니다.
 
 ### MCP 서버 설정
 
@@ -605,6 +743,26 @@ Claude Forge는 3계층 메모리 시스템을 사용합니다:
 
 ---
 
+## 📚 Knowledge 자동 갱신
+
+`knowledge/` 폴더의 문서는 **매주 월요일** GitHub Actions가 자동으로 최신 내용으로 갱신합니다.
+
+```bash
+# Claude Code 세션에서 수동 실행
+/update-knowledge --list                          # 현재 목록
+/update-knowledge --add URL "제목"                # 새 문서 추가
+/update-knowledge --refresh                       # 30일 이상 된 항목 갱신
+/update-knowledge --refresh-all                   # 전체 강제 갱신
+```
+
+자동 갱신에 필요한 GitHub Secret:
+
+```
+ANTHROPIC_API_KEY = sk-ant-...   # Settings → Secrets → Actions
+```
+
+---
+
 ## 🤝 기여
 
 에이전트, 커맨드, 스킬, 훅 추가 방법은 [CONTRIBUTING.md](CONTRIBUTING.md)를 참조하세요.
@@ -616,7 +774,7 @@ Claude Forge는 3계층 메모리 시스템을 사용합니다:
 ## Claude Forge를 사용하시나요? 배지를 달아주세요!
 
 ```markdown
-[![Built with Claude Forge](https://img.shields.io/badge/Built_with-Claude_Forge-orange?style=flat-square)](https://github.com/daeha76/claude-forge)
+[![Built with dotnet-claude-forge](https://img.shields.io/badge/Built_with-dotnet--claude--forge-512BD4?style=flat-square&logo=dotnet)](https://github.com/daeha76/dotnet-claude-forge)
 ```
 
 이 배지를 프로젝트 README에 추가하여 Claude Forge 사용을 알려주세요.
