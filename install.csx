@@ -481,9 +481,9 @@ void InitDotNetProject(string name, string baseDir)
     Print("");
     Print("  .NET Clean Architecture 솔루션 생성 중...", ConsoleColor.White);
 
-    // 솔루션 파일
-    Run("dotnet", $"new sln -n {name} --output .", root);
-    Print($"  [OK] {name}.sln", ConsoleColor.Green);
+    // 솔루션 파일 (.slnx 포맷 — XML 기반, 머지 충돌 최소화)
+    Run("dotnet", $"new sln --format slnx -n {name} --output .", root);
+    Print($"  [OK] {name}.slnx", ConsoleColor.Green);
 
     // src 프로젝트 정의
     var srcProjects = new (string Template, string Extra, string ProjName, string Dir)[]
@@ -493,7 +493,6 @@ void InitDotNetProject(string name, string baseDir)
         ("classlib", "",                                              $"{name}.Infrastructure", Path.Combine("src", $"{name}.Infrastructure")),
         ("webapi",   "",                                              $"{name}.Api",             Path.Combine("src", $"{name}.Api")),
         ("blazor",   "--interactivity Auto --empty",                  $"{name}.Web",             Path.Combine("src", $"{name}.Web")),
-        ("aspire-apphost", "",                                        $"{name}.AppHost",         Path.Combine("src", $"{name}.AppHost")),
     };
 
     // tests 프로젝트 정의
@@ -509,7 +508,20 @@ void InitDotNetProject(string name, string baseDir)
         var fullDir = Path.Combine(root, dir);
         Directory.CreateDirectory(fullDir);
         Run("dotnet", $"new {tmpl} -n {proj} --output . --force {extra}".Trim(), fullDir);
-        Run("dotnet", $"sln add {dir}", root);
+
+        if (tmpl == "blazor")
+        {
+            // Blazor Auto 템플릿이 자동 생성한 중첩 .sln/.slnx 삭제 (루트 솔루션과 충돌 방지)
+            foreach (var f in Directory.GetFiles(fullDir, "*.sln", SearchOption.AllDirectories)) File.Delete(f);
+            foreach (var f in Directory.GetFiles(fullDir, "*.slnx", SearchOption.AllDirectories)) File.Delete(f);
+            // Blazor Auto = 서버 프로젝트 + WASM 클라이언트 프로젝트 → 루트 솔루션에 각각 추가
+            Run("dotnet", $"sln add {dir}/{proj}", root);
+            Run("dotnet", $"sln add {dir}/{proj}.Client", root);
+        }
+        else
+        {
+            Run("dotnet", $"sln add {dir}", root);
+        }
 
         // classlib 기본 빈 파일 삭제
         var class1 = Path.Combine(fullDir, "Class1.cs");
@@ -521,17 +533,17 @@ void InitDotNetProject(string name, string baseDir)
     // Clean Architecture 참조 설정
     Print("");
     Print("  프로젝트 참조 연결 중...", ConsoleColor.White);
+    // Blazor Auto는 src/{name}.Web/{name}.Web/ (서버) + src/{name}.Web/{name}.Web.Client/ (WASM) 이중 구조
+    // apphost.cs는 루트에서 AddCSharpApp() 방식 사용 → Api/Web ProjectReference 불필요
     var refs = new (string From, string To)[]
     {
-        ($"src/{name}.Application",         $"src/{name}.Domain"),
-        ($"src/{name}.Infrastructure",      $"src/{name}.Application"),
-        ($"src/{name}.Api",                 $"src/{name}.Infrastructure"),
-        ($"src/{name}.Api",                 $"src/{name}.Application"),
-        ($"src/{name}.Web",                 $"src/{name}.Application"),
-        ($"src/{name}.AppHost",             $"src/{name}.Api"),
-        ($"src/{name}.AppHost",             $"src/{name}.Web"),
-        ($"tests/{name}.Domain.Tests",      $"src/{name}.Domain"),
-        ($"tests/{name}.Application.Tests", $"src/{name}.Application"),
+        ($"src/{name}.Application",                 $"src/{name}.Domain"),
+        ($"src/{name}.Infrastructure",              $"src/{name}.Application"),
+        ($"src/{name}.Api",                         $"src/{name}.Infrastructure"),
+        ($"src/{name}.Api",                         $"src/{name}.Application"),
+        ($"src/{name}.Web/{name}.Web",              $"src/{name}.Application"),
+        ($"tests/{name}.Domain.Tests",              $"src/{name}.Domain"),
+        ($"tests/{name}.Application.Tests",         $"src/{name}.Application"),
     };
     foreach (var (from, to) in refs)
         Run("dotnet", $"add {from} reference {to}", root);
@@ -587,10 +599,13 @@ void InitDotNetProject(string name, string baseDir)
     Print("  [OK] Tests ← NSubstitute, FluentAssertions", ConsoleColor.DarkGray);
     Print("  [OK] NuGet 패키지 설치 완료", ConsoleColor.Green);
 
-    // ── Bootstrap 제거 (Blazor Web App 기본 포함분) ──────────────────
+    // ── Bootstrap 제거 + TailwindCSS v4 설정 ──────────────────────────
     Print("");
-    Print("  Bootstrap 제거 중...", ConsoleColor.White);
-    var wwwrootDir   = Path.Combine(root, "src", $"{name}.Web", "wwwroot");
+    Print("  Bootstrap 제거 + TailwindCSS v4 설정 중...", ConsoleColor.White);
+
+    // Blazor Auto: 실제 서버 프로젝트는 src/{name}.Web/{name}.Web/ 에 위치 (중첩 구조)
+    var webServerProjectDir = Path.Combine(root, "src", $"{name}.Web", $"{name}.Web");
+    var wwwrootDir   = Path.Combine(webServerProjectDir, "wwwroot");
     var cssDir       = Path.Combine(wwwrootDir, "css");
     var bootstrapDir = Path.Combine(cssDir, "bootstrap");
     if (Directory.Exists(bootstrapDir))
@@ -598,63 +613,199 @@ void InitDotNetProject(string name, string baseDir)
         Directory.Delete(bootstrapDir, recursive: true);
         Print("  [OK] wwwroot/css/bootstrap/ 삭제", ConsoleColor.Green);
     }
-    // app.css 내 Bootstrap import 제거
+
+    // app.css: Bootstrap import 제거 + Tailwind v4 @import 추가
+    Directory.CreateDirectory(cssDir);
     var appCssPath = Path.Combine(cssDir, "app.css");
-    if (File.Exists(appCssPath))
-    {
-        var css = File.ReadAllText(appCssPath);
-        css = System.Text.RegularExpressions.Regex.Replace(
-            css, "@import\\s+[\"']bootstrap[^\"']*[\"'];?\\s*\\n?", "");
-        css = System.Text.RegularExpressions.Regex.Replace(
-            css, @"\.btn[^{]*\{[^}]*\}\s*", "");
-        File.WriteAllText(appCssPath, css, Encoding.UTF8);
-        Print("  [OK] app.css → Bootstrap import 제거", ConsoleColor.Green);
-    }
-    // App.razor 내 Bootstrap CDN 링크 제거
-    var appRazorPath = Path.Combine(root, "src", $"{name}.Web", "Components", "App.razor");
+    var cssContent = File.Exists(appCssPath) ? File.ReadAllText(appCssPath) : "";
+    cssContent = System.Text.RegularExpressions.Regex.Replace(
+        cssContent, "@import\\s+[\"']bootstrap[^\"']*[\"'];?\\s*\\n?", "");
+    cssContent = System.Text.RegularExpressions.Regex.Replace(
+        cssContent, @"\.btn[^{]*\{[^}]*\}\s*", "");
+    File.WriteAllText(appCssPath, cssContent.TrimEnd() + "\n", Encoding.UTF8);
+    Print("  [OK] app.css → Bootstrap 제거 완료", ConsoleColor.Green);
+
+    // tailwindcss_input.css: Tailwind v4 진입점 (빌드 입력 파일)
+    var twInputPath = Path.Combine(cssDir, "tailwindcss_input.css");
+    File.WriteAllText(twInputPath, "@import \"tailwindcss\";\n", Encoding.UTF8);
+    Print("  [OK] tailwindcss_input.css 생성 (@import \"tailwindcss\")", ConsoleColor.Green);
+
+    // App.razor: Bootstrap CDN 링크 제거 + tailwindcss_output.css 링크 추가
+    var appRazorPath = Path.Combine(webServerProjectDir, "Components", "App.razor");
     if (!File.Exists(appRazorPath))
-        appRazorPath = Path.Combine(root, "src", $"{name}.Web", "App.razor");
+        appRazorPath = Path.Combine(webServerProjectDir, "App.razor");
     if (File.Exists(appRazorPath))
     {
         var razor = File.ReadAllText(appRazorPath);
         razor = System.Text.RegularExpressions.Regex.Replace(
             razor, @"<link[^>]*bootstrap[^>]*>\s*\n?", "",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        // tailwindcss_output.css 링크 추가 (Aspire watch 모드의 출력 파일)
+        if (!razor.Contains("tailwindcss_output.css"))
+            razor = razor.Replace("</head>", "    <link rel=\"stylesheet\" href=\"css/tailwindcss_output.css\" />\n</head>");
         File.WriteAllText(appRazorPath, razor, Encoding.UTF8);
-        Print("  [OK] App.razor → Bootstrap link 제거", ConsoleColor.Green);
+        Print("  [OK] App.razor → Bootstrap 제거 + tailwindcss_output.css 링크 추가", ConsoleColor.Green);
     }
-    Print("  [OK] Bootstrap 제거 완료 (Tailwind CSS v4 사용)", ConsoleColor.Green);
+    Print("  [OK] Bootstrap 제거 완료", ConsoleColor.Green);
 
-    // ── AppHost Program.cs 설정 ──────────────────────────────────────
+    // ── TailwindCSS v4 npm 설치 ──────────────────────────────────────
+    // 공식 CLI 문서: https://tailwindcss.com/docs/installation/tailwind-cli
     Print("");
-    Print("  AppHost Program.cs 구성 중...", ConsoleColor.White);
-    var appHostProgramCs = Path.Combine(root, "src", $"{name}.AppHost", "Program.cs");
-    File.WriteAllText(appHostProgramCs, $"""
+    Print("  TailwindCSS v4 npm 패키지 설치 중...", ConsoleColor.White);
+    Print("  (참고: https://tailwindcss.com/docs/installation/tailwind-cli)", ConsoleColor.DarkGray);
+    if (CommandExists("npm"))
+    {
+        Run("npm", "init -y", webServerProjectDir);
+        Run("npm", "install --save-dev tailwindcss @tailwindcss/cli", webServerProjectDir);
+        Print("  [OK] npm install tailwindcss @tailwindcss/cli (--save-dev)", ConsoleColor.Green);
+    }
+    else
+    {
+        Print("  [참고] npm 없음 — aspire run 시 npx로 @tailwindcss/cli 자동 다운로드됩니다", ConsoleColor.Yellow);
+        Print("         권장: https://nodejs.org 설치 후 npm install 실행", ConsoleColor.Yellow);
+    }
+    Print("  [OK] TailwindCSS v4 설정 완료", ConsoleColor.Green);
+
+    // ── apphost.cs 생성 (루트, file-based Aspire) ──────────────────────────────────────
+    Print("");
+    Print("  apphost.cs 생성 중...", ConsoleColor.White);
+    // ASPIRE006: 리소스 이름에 점(.) 불허 → 하이픈으로 치환
+    var resourcePrefix = name.ToLower().Replace(".", "-");
+    File.WriteAllText(Path.Combine(root, "apphost.cs"), $"""
+#:sdk Aspire.AppHost.Sdk@13.1.2
+
+#pragma warning disable ASPIRECSHARPAPPS001
+
 var builder = DistributedApplication.CreateBuilder(args);
 
-// API 서버 등록
-var api = builder.AddProject<Projects.{name.Replace(".", "_")}_Api>("{name.ToLower()}-api");
-
-// Tailwind CSS v4 watch (개발 시 자동 빌드)
-var webProjectDir = Path.Combine(builder.AppHostDirectory, "..", "{name}.Web");
+// 1. TailwindCSS Watch 모드 (가장 먼저 실행)
+// Blazor Auto 서버 프로젝트는 src/{name}.Web/{name}.Web/ 에 위치 (중첩 구조)
+var webProjectDir = Path.Combine(builder.AppHostDirectory, "src", "{name}.Web", "{name}.Web");
+var cssDir = Path.Combine(webProjectDir, "wwwroot", "css");
 builder.AddExecutable("tailwindcss", "npx", webProjectDir,
     "@tailwindcss/cli",
-    "-i", "./wwwroot/css/app.css",
-    "-o", "./wwwroot/css/output.css",
+    "-i", Path.Combine(cssDir, "tailwindcss_input.css"),
+    "-o", Path.Combine(cssDir, "tailwindcss_output.css"),
     "--watch");
 
-// Blazor 웹 프론트엔드 등록
-builder.AddProject<Projects.{name.Replace(".", "_")}_Web>("{name.ToLower()}-web")
+// 2. API 백엔드 (AddCSharpApp: ProjectReference 불필요)
+var api = builder.AddCSharpApp("{resourcePrefix}-api", "src/{name}.Api/",
+    options => options.LaunchProfileName = "https");
+
+// 3. Blazor 프론트엔드 (AddCSharpApp: ProjectReference 불필요)
+builder.AddCSharpApp("{resourcePrefix}-web", "src/{name}.Web/{name}.Web/",
+    options => options.LaunchProfileName = "https")
     .WithReference(api)
     .WaitFor(api);
 
 builder.Build().Run();
 """, Encoding.UTF8);
-    Print("  [OK] AppHost/Program.cs (Api + Tailwind watch + Web)", ConsoleColor.Green);
+    Print("  [OK] apphost.cs (file-based Aspire — AddCSharpApp + HTTPS)", ConsoleColor.Green);
+
+    // ── API Program.cs 설정 (Swagger UI + Health Checks + CORS) ──────
+    Print("");
+    Print("  API Program.cs 구성 중...", ConsoleColor.White);
+    var apiProgramCsPath = Path.Combine(root, "src", $"{name}.Api", "Program.cs");
+    File.WriteAllText(apiProgramCsPath, $$"""
+using Microsoft.OpenApi;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+
+// Swagger / OpenAPI (Development 환경에서만 UI 노출)
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "{{name}} API",
+        Version = "v1",
+        Description = "{{name}} Clean Architecture API"
+    });
+    // XML 주석 자동 포함 (GenerateDocumentationFile 활성화 시)
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath)) options.IncludeXmlComments(xmlPath);
+});
+
+// Health Checks
+builder.Services.AddHealthChecks();
+
+// CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowedOrigins", policy =>
+        policy.WithOrigins(
+                builder.Configuration["Cors:AllowedOrigins"]?.Split(',') ?? [])
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials());
+});
+
+// Problem Details (RFC 7807)
+builder.Services.AddProblemDetails();
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "{{name}} API v1"));
+}
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+    app.UseHsts();
+}
+
+app.UseCors("AllowedOrigins");
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
+app.MapHealthChecks("/health");
+app.MapHealthChecks("/health/ready");
+
+app.Run();
+""", Encoding.UTF8);
+    Print("  [OK] API/Program.cs (Swagger UI + Health Checks + CORS + Problem Details)", ConsoleColor.Green);
+
+    // API 프로젝트에 XML 문서 생성 활성화 (Swagger XML 주석 지원)
+    var apiCsprojPath = Path.Combine(root, "src", $"{name}.Api", $"{name}.Api.csproj");
+    if (File.Exists(apiCsprojPath))
+    {
+        var csproj = File.ReadAllText(apiCsprojPath);
+        if (!csproj.Contains("GenerateDocumentationFile"))
+        {
+            csproj = csproj.Replace("</PropertyGroup>",
+                "    <GenerateDocumentationFile>true</GenerateDocumentationFile>\n" +
+                "    <NoWarn>$(NoWarn);1591</NoWarn>\n" +
+                "  </PropertyGroup>");
+            File.WriteAllText(apiCsprojPath, csproj, Encoding.UTF8);
+            Print("  [OK] API.csproj → XML 문서 생성 활성화 (1591 경고 억제)", ConsoleColor.Green);
+        }
+    }
 
     // .gitignore
     Run("dotnet", "new gitignore --output . --force", root);
-    Print("  [OK] .gitignore", ConsoleColor.Green);
+    // Tailwind CSS 빌드 산출물 + Node.js 항목 추가
+    var gitignorePath = Path.Combine(root, ".gitignore");
+    if (File.Exists(gitignorePath))
+    {
+        File.AppendAllText(gitignorePath, """
+
+
+# Tailwind CSS generated output (빌드 산출물 — Aspire watch 모드 출력)
+**/wwwroot/css/tailwindcss_output.css
+
+# Node.js (Tailwind CSS CLI)
+**/node_modules/
+**/package-lock.json
+""", Encoding.UTF8);
+    }
+    Print("  [OK] .gitignore (tailwindcss_output.css + node_modules/ 추가)", ConsoleColor.Green);
 
     // global.json — SDK 버전 고정
     var dotnetVerFull = RunCapture("dotnet", "--version").Trim();
@@ -687,20 +838,20 @@ builder.Build().Run();
 - **언어**: C# / .NET 10
 - **프론트엔드**: Blazor Auto (SSR + WASM)
 - **백엔드**: ASP.NET Core Web API
-- **오케스트레이션**: .NET Aspire AppHost
+- **오케스트레이션**: .NET Aspire (file-based apphost.cs)
 - **DB**: Supabase (PostgreSQL)
 - **스타일**: Tailwind CSS v4
 
 ## 프로젝트 구조
 
 ```
+apphost.cs                 # Aspire 오케스트레이터 (file-based)
 src/
   {name}.Domain/           # 엔터티, 도메인 이벤트, 값 객체
   {name}.Application/      # 유스케이스, 인터페이스, DTO
   {name}.Infrastructure/   # DB, 외부 서비스 구현체
   {name}.Api/              # ASP.NET Core Web API
   {name}.Web/              # Blazor Auto 프론트엔드
-  {name}.AppHost/          # .NET Aspire 오케스트레이터
 tests/
   {name}.Domain.Tests/
   {name}.Application.Tests/
@@ -709,40 +860,13 @@ tests/
 ## 빠른 시작
 
 ```bash
-dotnet script run.csx          # Aspire AppHost 실행
+aspire run          # Aspire 실행 (TailwindCSS watch 포함)
 dotnet build
 dotnet test
 ```
 """, Encoding.UTF8);
     Print("  [OK] README.md", ConsoleColor.Green);
 
-    // ── run.csx 생성 ──────────────────────────────────────────
-    File.WriteAllText(Path.Combine(root, "run.csx"), $"""
-#!/usr/bin/env dotnet-script
-// run.csx — {name} 개발 서버 실행
-// 사용법: dotnet script run.csx
-
-using System;
-using System.Diagnostics;
-using System.IO;
-using System.Linq; // Add this for .Where()
-
-var root    = Path.GetDirectoryName(Environment.GetCommandLineArgs()
-    .Where(a => a.EndsWith(".csx", StringComparison.OrdinalIgnoreCase) && File.Exists(a))
-    .FirstOrDefault() ?? Directory.GetCurrentDirectory())!;
-var appHost = Path.Combine(root, "src", "{name}.AppHost");
-
-Console.WriteLine("{name} AppHost 시작 중...");
-Console.WriteLine("경로: " + appHost);
-Console.WriteLine();
-
-var psi = new ProcessStartInfo("dotnet", "run");
-psi.WorkingDirectory = appHost;
-psi.UseShellExecute  = false;
-using var p = Process.Start(psi)!;
-p.WaitForExit();
-""", Encoding.UTF8);
-    Print("  [OK] run.csx", ConsoleColor.Green);
 
     // ── Claude Forge 기능 복사 (.claude/) ─────────────────────
     Print("");
@@ -782,7 +906,7 @@ p.WaitForExit();
 ## 빌드 & 검증 명령어
 
 ```bash
-dotnet script run.csx   # AppHost 실행
+aspire run              # Aspire 실행 (TailwindCSS watch 포함)
 dotnet build            # 빌드
 dotnet test             # 테스트
 dotnet format --verify-no-changes
@@ -791,14 +915,14 @@ dotnet format --verify-no-changes
 ## 핵심 디렉토리
 
 ```
-src/{name}.Domain/        # 엔터티, 도메인
-src/{name}.Application/   # 유스케이스
+apphost.cs                 # Aspire 오케스트레이터 (file-based)
+src/{name}.Domain/         # 엔터티, 도메인
+src/{name}.Application/    # 유스케이스
 src/{name}.Infrastructure/ # DB, 외부 서비스
-src/{name}.Api/           # Web API
-src/{name}.Web/           # Blazor Auto
-src/{name}.AppHost/       # Aspire 오케스트레이터
-tests/                    # 단위·통합 테스트
-.claude/                  # Claude Forge 기능 (agents, rules, commands, skills)
+src/{name}.Api/            # Web API
+src/{name}.Web/            # Blazor Auto
+tests/                     # 단위·통합 테스트
+.claude/                   # Claude Forge 기능 (agents, rules, commands, skills)
 ```
 """, Encoding.UTF8);
     Print("  [OK] CLAUDE.md", ConsoleColor.Green);
@@ -816,17 +940,18 @@ tests/                    # 단위·통합 테스트
     Print("  ╔══════════════════════════════════════════════════╗", ConsoleColor.Green);
     Print($"  ║   {name} 프로젝트 생성 완료!", ConsoleColor.Green);
     Print("  ╠══════════════════════════════════════════════════╣", ConsoleColor.Green);
-    Print("  ║  6 src · 2 tests · AppHost · Claude Forge 포함  ║", ConsoleColor.Green);
+    Print("  ║  5 src · 2 tests · apphost.cs · Claude Forge 포함 ║", ConsoleColor.Green);
     Print("  ╚══════════════════════════════════════════════════╝", ConsoleColor.Green);
     Print("");
     Print("  다음 단계:", ConsoleColor.Cyan);
     Print($"    cd \"{root}\"");
-    Print("    dotnet script run.csx  # AppHost 실행");
+    Print("    aspire run             # Aspire 실행");
     Print("    dotnet build           # 빌드 확인");
     Print("    claude                 # Claude Code + Forge 사용 가능");
     Print("");
-    Print("  ★ Bootstrap 제거됨 — Tailwind CSS v4 를 직접 설정하세요", ConsoleColor.Yellow);
-    Print("    https://tailwindcss.com/docs/installation", ConsoleColor.DarkGray);
+    Print("  ★ TailwindCSS v4 설정 완료 — aspire run 시 watch 모드 자동 시작", ConsoleColor.Yellow);
+    Print("    Tailwind CLI 문서: https://tailwindcss.com/docs/installation/tailwind-cli", ConsoleColor.DarkGray);
+    Print("  ★ Swagger UI: Aspire 대시보드에서 api 서비스 URL 확인 후 /swagger 접속", ConsoleColor.Yellow);
     Print("");
     Print($"  프로젝트 위치: {root}", ConsoleColor.Yellow);
 }
