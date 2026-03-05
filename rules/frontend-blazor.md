@@ -151,17 +151,51 @@ public interface IBrowserStorageService
 }
 ```
 
-### 그리드/드래그앤드롭 사용자 설정 저장 (필수)
+### 사용자 설정 저장 전략 (필수 선택)
 
-그리드, 드래그앤드롭, 컬럼 순서 등 UI 커스터마이징은 **반드시 사용자별로 저장하고 복원**:
+그리드 컬럼 순서, 테마, 드래그앤드롭 순서 등 UI 커스터마이징 저장 방식은 **프로젝트 성격에 따라 결정**:
 
-> ⚠️ **적용 범위**: 민감하지 않은 UI 설정(그리드 컬럼 순서, 테마, 정렬 기준 등)에만 사용.  
-> 인증 토큰, 개인 식별 정보(PII), API Key 는 localStorage 저장 **절대 금지** — HttpOnly Cookie 또는 서버 세션 사용.
+| 방식 | 적합한 경우 | 구현 난이도 |
+|:-----|:-----------|:-----------|
+| **localStorage** (브라우저/PC별) | 개인용, 단순 앱, 오프라인 우선 | 낮음 |
+| **서버 저장** (어느 PC에서나 동일) | B2B 엔터프라이즈, 멀티디바이스 | 중간 (API + DB 테이블) |
 
+**B2B 엔터프라이즈 기본값: 서버 저장 선택**
+
+```sql
+-- user_preferences 테이블 (JSONB)
+CREATE TABLE user_preferences (
+    user_id     UUID PRIMARY KEY REFERENCES auth.users(id),
+    preferences JSONB NOT NULL DEFAULT '{}',
+    updated_at  TIMESTAMPTZ DEFAULT NOW()
+);
+-- 예: { "theme": "dark", "grid-orders": { "columns": [...], "sort": "created_at" } }
+```
+
+```csharp
+// Application — Query/Command로 읽기/저장
+public record GetUserPreferencesQuery(Guid UserId) : IRequest<Result<UserPreferencesDto>>;
+public record SaveUserPreferenceCommand(Guid UserId, string Key, JsonElement Value) : IRequest<Result>;
+
+// Blazor 컴포넌트 — OnAfterRenderAsync에서 서버에서 불러오기
+protected override async Task OnAfterRenderAsync(bool firstRender)
+{
+    if (firstRender)
+    {
+        var prefs = await PreferencesClient.GetAsync();
+        gridSettings = prefs.Get<GridSettings>("grid-orders");
+        StateHasChanged();
+    }
+}
+```
+
+> ⚠️ **적용 범위**: 민감하지 않은 UI 설정에만 사용.
+> 인증 토큰, PII, API Key는 절대 저장 금지.
+
+localStorage 방식을 선택한 경우:
 - 키 네이밍: `grid-{component-name}`, `dnd-{component-name}` 형식
-- 저장 시점: UI 변경 즉시 (디바운스 없이)
-- 로그아웃 후에도 유지 (localStorage는 만료 없음) — **UI 개인화 설정에만 해당**
-- SSR 첫 렌더링: 기본값 사용 → `OnAfterRenderAsync` 후 localStorage 값으로 업데이트
+- 저장 시점: UI 변경 즉시
+- SSR 첫 렌더링: 기본값 → `OnAfterRenderAsync` 후 업데이트
 
 ## Blazor Auto 렌더링 모드 기준
 

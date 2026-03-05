@@ -118,6 +118,42 @@ CREATE TRIGGER audit_orders
 
 > ⚠️ BLOB/대용량 컬럼이 있는 테이블은 해당 컬럼 제외하여 저장. `row_to_json(NEW) - 'large_column'` 방식으로 필터.
 
+## Audit 이력 복원 (Restore) — 권한자 전용
+
+`audit_logs.old_data`를 읽어 이전 상태로 되돌리는 패턴. **시스템 관리자 또는 회사 관리자 권한** 필요.
+
+```csharp
+// Application — RestoreRecordCommand
+public record RestoreRecordCommand(Guid AuditLogId, Guid RestoredBy) : IRequest<Result>;
+
+public class RestoreRecordCommandHandler : IRequestHandler<RestoreRecordCommand, Result>
+{
+    public async Task<Result> Handle(RestoreRecordCommand request, CancellationToken ct)
+    {
+        var log = await _db.AuditLogs
+            .FirstOrDefaultAsync(a => a.Id == request.AuditLogId, ct);
+
+        if (log is null) return Result.Failure("이력을 찾을 수 없습니다.");
+        if (log.OldData is null) return Result.Failure("INSERT 이력은 복원할 수 없습니다.");
+        if (log.Operation == "DELETE") return Result.Failure("삭제 복원은 별도 승인 절차 필요.");
+
+        // old_data JSONB → 엔티티 역직렬화 후 저장
+        // 복원 자체도 audit_logs에 기록됨 (Trigger 자동)
+        await _db.Database.ExecuteSqlRawAsync(
+            $"UPDATE {log.TableName} SET ... WHERE id = '{log.RecordId}'");
+
+        return Result.Success();
+    }
+}
+```
+
+**복원 규칙**:
+- INSERT 이력: `old_data = NULL` → 복원 불가 (삭제 처리만 가능)
+- UPDATE 이력: `old_data`로 이전 값 복원 가능
+- DELETE 이력: 재삽입 가능하나 **관리자 이중 승인** 권장
+- 복원 작업 자체도 `audit_logs`에 자동 기록 (Trigger 동작)
+- API 엔드포인트는 `[Authorize(Roles = "SystemAdmin,CompanyAdmin")]` 필수
+
 ## Audit 컬럼 표준 (모든 테이블 공통)
 
 ```sql

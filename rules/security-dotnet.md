@@ -186,6 +186,123 @@ app.UseAuthorization();
 }
 ```
 
+## 멀티테넌트 RBAC (회사/부서/개인 권한)
+
+### 권한 계층 구조
+
+```
+Tenant (회사)                    ← 최상위 격리 단위
+  └── Department (부서)
+        └── User
+              └── Role           ← 역할별 권한 집합
+```
+
+### 역할 정의
+
+| Role | 권한 범위 |
+|:-----|:---------|
+| `system_admin` | 모든 테넌트 접근, 시스템 설정 변경 |
+| `company_admin` | 자사 테넌트 전체, 부서·사용자 역할 조정 |
+| `dept_manager` | 소속 부서 데이터, 부서원 권한 일부 조정 |
+| `member` | 본인 데이터 + 부서 공유 데이터 (읽기) |
+
+### DB 스키마
+
+```sql
+CREATE TABLE tenants (
+    id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name        TEXT NOT NULL,
+    created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE departments (
+    id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    tenant_id   UUID NOT NULL REFERENCES tenants(id),
+    name        TEXT NOT NULL
+);
+
+CREATE TABLE user_roles (
+    user_id       UUID NOT NULL REFERENCES auth.users(id),
+    tenant_id     UUID NOT NULL REFERENCES tenants(id),
+    department_id UUID REFERENCES departments(id), -- NULL이면 회사 전체
+    role          TEXT NOT NULL CHECK (role IN ('system_admin','company_admin','dept_manager','member')),
+    PRIMARY KEY (user_id, tenant_id)
+);
+```
+
+### RLS — tenant_id 기반 격리
+
+```sql
+-- 모든 업무 테이블에 tenant_id 컬럼 추가 후 RLS 적용
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+
+-- 백엔드 서비스 키는 BYPASS RLS — 앱 레벨에서 tenant 필터 적용
+-- (직접 Supabase 접근 없으므로 auth.uid() 정책 불필요)
+```
+
+### .NET Authorization — MediatR 파이프라인
+
+```csharp
+// 권한 확인 Behavior
+public class AuthorizationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : IAuthorizedRequest
+{
+    public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken ct)
+    {
+        var userId = _currentUser.Id;
+        var tenantId = _currentUser.TenantId;
+        var role = await _roleService.GetRoleAsync(userId, tenantId, ct);
+
+        if (!request.RequiredRoles.Contains(role))
+            return Result.Failure<TResponse>("권한이 없습니다.") as TResponse
+                   ?? throw new ForbiddenException();
+
+        return await next();
+    }
+}
+
+// Command에 권한 명시
+public record RestoreRecordCommand(...) : IRequest<Result>, IAuthorizedRequest
+{
+    public IReadOnlyList<string> RequiredRoles => ["system_admin", "company_admin"];
+}
+```
+
+### API Controller — 역할 기반 접근 제어
+
+```csharp
+// 시스템 관리자 전용
+[Authorize(Roles = "system_admin")]
+[HttpGet("admin/tenants")]
+public async Task<IActionResult> GetAllTenants() { ... }
+
+// 회사 관리자 이상
+[Authorize(Roles = "system_admin,company_admin")]
+[HttpPost("roles")]
+public async Task<IActionResult> AssignRole([FromBody] AssignRoleCommand cmd) { ... }
+
+// 부서 관리자 이상
+[Authorize(Roles = "system_admin,company_admin,dept_manager")]
+[HttpGet("departments/{deptId}/members")]
+public async Task<IActionResult> GetDeptMembers(Guid deptId) { ... }
+```
+
+### 현재 사용자 컨텍스트 서비스
+
+```csharp
+public interface ICurrentUserService
+{
+    Guid Id { get; }
+    Guid TenantId { get; }
+    Guid? DepartmentId { get; }
+    string Role { get; }
+    bool IsSystemAdmin { get; }
+    bool IsCompanyAdmin { get; }
+}
+```
+
+모든 Query/Command Handler에서 `ICurrentUserService`로 테넌트 필터 적용 — Raw SQL에 tenant_id 직접 삽입 금지.
+
 ## 보안 체크리스트 (커밋 전 필수)
 
 - [ ] `appsettings.json`에 시크릿 없음 (API Key, Password, Token)
@@ -195,3 +312,6 @@ app.UseAuthorization();
 - [ ] Rate Limiting 설정 확인
 - [ ] CORS Origins가 wildcard `*` 아님
 - [ ] `ValidationException` → Problem Details 변환 미들웨어 등록 확인 (`UseExceptionHandler`)
+- [ ] 모든 Query/Command Handler에서 `tenant_id` 필터 적용 확인 (테넌트 간 데이터 누출 방지)
+- [ ] Restore/Delete 등 파괴적 작업에 `[Authorize(Roles = "system_admin,company_admin")]` 적용
+- [ ] `ICurrentUserService`를 통해 현재 사용자 역할 주입 (하드코딩 금지)
