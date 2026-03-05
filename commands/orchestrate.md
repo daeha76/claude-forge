@@ -70,7 +70,7 @@ $ARGUMENTS에서 플래그를 추출한다:
   pyproject.toml        → Python
   Cargo.toml            → Rust
   Makefile (단독)       → Make-based
-  *.sln / *.csproj      → .NET
+  *.slnx / *.sln / *.csproj      → .NET
 ```
 
 감지 결과를 기반으로 도메인별 명령을 설정한다:

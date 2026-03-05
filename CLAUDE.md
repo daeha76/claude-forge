@@ -69,7 +69,7 @@ docs/       # 사용자 문서, 이미지
 
 | 스킬 | 동작 여부 | 비고 |
 |------|-----------|------|
-| `build-system` | ✅ 완전 지원 | `.csproj`/`.sln` 자동 감지, `dotnet build/test` 실행 |
+| `build-system` | ✅ 완전 지원 | `.csproj`/`.slnx` 자동 감지, `dotnet build/test` 실행 |
 | `verification-engine` | ✅ 지원 | CLAUDE.md에 명령어 명시 시 자동 참조 |
 | `security-pipeline` | ✅ 지원 | 언어 무관, 파일 패턴 기반 보안 스캔 |
 | `manage-skills` | ✅ 지원 | 프로젝트 패턴 분석 및 verify-* 스킬 관리 |

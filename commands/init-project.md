@@ -24,14 +24,14 @@ argument-hint: [프로젝트명] [--type next|vite|go|python|rust|dotnet]
 ```
 수집 항목:
   1. package.json / go.mod / Cargo.toml / pyproject.toml -> 기술 스택
-  1a. *.sln / *.csproj / global.json -> .NET 기술 스택 (Blazor/API)
+  1a. *.slnx / *.sln / *.csproj / global.json -> .NET 기술 스택 (Blazor/API)
   2. .git 존재 여부 -> Git 초기화 상태
   3. README.md -> 프로젝트 설명
   4. 기존 CLAUDE.md -> 이미 초기화 여부
   5. 디렉토리 구조 -> 아키텍처 패턴
 ```
 
-> `.sln` 파일이 발견되면 기술 스택을 `.NET`으로 자동 설정한다.
+> `.slnx` 또는 `.sln` 파일이 발견되면 기술 스택을 `.NET`으로 자동 설정한다.
 
 기존 CLAUDE.md가 있으면 사용자에게 덮어쓰기/병합/취소를 확인한다.
 

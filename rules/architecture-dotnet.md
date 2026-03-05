@@ -14,10 +14,17 @@ Infrastructure (EF Core, Supabase, External Services)
 
 **절대 금지**: 하위 레이어가 상위 레이어를 참조하는 역방향 의존성
 
+## Solution 파일 규칙
+
+- **`.slnx` 포맷 필수** — .NET 10 기본값, XML 기반으로 가독성·머지 충돌 최소화
+- **루트에 단 하나의 `.slnx` 파일만 허용** — 하위 프로젝트 폴더(`Web/`, `Api/` 등) 안에 `.sln`/`.slnx` 생성 절대 금지
+- `dotnet new sln` → .NET 10에서 자동으로 `.slnx` 생성 (별도 플래그 불필요)
+- `dotnet new web`, `dotnet new blazor` 등 프로젝트 생성 시 자동 생성되는 `.sln`은 즉시 삭제
+
 ## 프로젝트 구조
 
 ```
-Solution.sln
+Solution.slnx
 ├── src/
 │   ├── Domain/                  # 순수 도메인 로직 (외부 참조 없음)
 │   ├── Application/             # UseCase, CQRS, Interfaces
