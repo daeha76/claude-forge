@@ -16,9 +16,12 @@ Infrastructure (EF Core, Supabase, External Services)
 
 ## Solution 파일 규칙
 
-- **`.slnx` 포맷 필수** — .NET 10 기본값, XML 기반으로 가독성·머지 충돌 최소화
+- **`.slnx` 포맷 필수** — XML 기반으로 가독성·머지 충돌 최소화
 - **루트에 단 하나의 `.slnx` 파일만 허용** — 하위 프로젝트 폴더(`Web/`, `Api/` 등) 안에 `.sln`/`.slnx` 생성 절대 금지
-- `dotnet new sln` → .NET 10에서 자동으로 `.slnx` 생성 (별도 플래그 불필요)
+- 솔루션 생성 시 반드시 `--format slnx` 플래그 명시 (기본값이 `sln`이므로 생략 금지):
+  ```bash
+  dotnet new sln --format slnx -n MySolution
+  ```
 - `dotnet new web`, `dotnet new blazor` 등 프로젝트 생성 시 자동 생성되는 `.sln`은 즉시 삭제
 
 ## 프로젝트 구조
