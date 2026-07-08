@@ -291,6 +291,7 @@ jobs:
             --max-retries 2
             --max-concurrency 4
             --exclude '^https?://clau\.de'
+            --exclude 'github\.com/[^/]+/[^/]+/(stargazers|network|members|graphs)'
             --exclude '^https?://localhost'
             --exclude '^https?://(127\.|0\.0\.0\.0|192\.168\.|10\.)'
             INSTALL.md
