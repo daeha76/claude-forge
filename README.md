@@ -44,9 +44,9 @@ Claude Forge is the **equipment pack** for that assistant. One install gives it:
 
 - 11 specialist "colleagues" (agents) it can delegate to — planner, security reviewer, TDD guide, and more
 - 34 one-word shortcuts (commands like `/plan`, `/tdd`, `/code-review`) that trigger full workflows
-- 25 saved procedures (skills) it follows automatically
+- 26 saved procedures (skills) it follows automatically
 - 15 safety checks (hooks) that run silently in the background every time it touches your code
-- 9 rule files that define how it should behave
+- 10 rule files that define how it should behave
 - 4 external tool connections (browser automation, live docs search, and more)
 
 > **The oh-my-zsh analogy:** oh-my-zsh is a free add-on that turns a plain terminal into a colorful, plugin-packed power tool — without changing what the terminal fundamentally does. Claude Forge does the same thing for Claude Code.
@@ -107,10 +107,10 @@ cd claude-forge
 | What you get | Option A (`/plugin install`) | Option B (`./install.sh`) |
 |:-------------|:----------------------------:|:-------------------------:|
 | Commands (34 shortcuts)        | ✅ | ✅ |
-| Skills (25 saved procedures)   | ⚠️ partial | ✅ |
+| Skills (26 saved procedures)   | ⚠️ partial | ✅ |
 | Agents (11 specialists)        | ❌ | ✅ |
 | Hooks (15 safety checks)       | ❌ | ✅ |
-| Rules (9 behavior guidelines)  | ❌ | ✅ |
+| Rules (10 behavior guidelines)  | ❌ | ✅ |
 | MCP connections (4 tools)      | ❌ | ✅ |
 
 **Recommendation:** Use Option B unless you only need a taste of commands and skills.
@@ -129,9 +129,9 @@ Here is everything bundled in Claude Forge, explained in plain language:
 |:-----|:-----:|:--------------|
 | **Agents** (specialist colleagues) | 11 | Each one is an AI focused on a single job — planner, architect, security checker, test guide, database expert, and more. Claude calls the right one automatically. |
 | **Commands** (shortcut buttons) | 34 | Type `/plan` and Claude creates a full implementation plan. Type `/tdd` and it writes tests first, then code. All 34 are pre-built shortcuts for common developer tasks. |
-| **Skills** (saved procedures) | 25 | Step-by-step playbooks Claude follows automatically — like a recipe it has memorized. `loop-forge` turns any repetitive task into a reusable slash command in seconds. |
+| **Skills** (saved procedures) | 26 | Step-by-step playbooks Claude follows automatically — like a recipe it has memorized. `loop-forge` turns any repetitive task into a reusable slash command in seconds. |
 | **Hooks** (silent safety checks) | 15 built-in + 9 opt-in examples | These run before and after every action Claude takes. They block leaked passwords, dangerous database commands, and unsafe remote scripts — without you having to think about it. Covers 21 lifecycle events. |
-| **Rules** (behavior guidelines) | 9 | Written instructions Claude reads at the start of every session — coding style, security principles, git workflow conventions, and more. |
+| **Rules** (behavior guidelines) | 10 | Written instructions Claude reads at the start of every session — coding style, security principles, git workflow conventions, and more. |
 | **MCP connections** (external tools) | 4 | Browser automation (Playwright), live library docs (context7), web page reader (jina-reader), and Chrome DevTools for performance audits. |
 
 <details>
@@ -250,10 +250,11 @@ Here is everything bundled in Claude Forge, explained in plain language:
 </details>
 
 <details>
-<summary><strong>Full list: 25 Skills</strong></summary>
+<summary><strong>Full list: 26 Skills</strong></summary>
 
 | Skill | What it does |
 |:------|:------------|
+| **blind-spot-pass** | Before starting work in an unfamiliar domain, surface what you don't know you don't know (unknown unknowns) and teach just enough to prompt well. Shift-left discovery. |
 | **build-system** | Auto-detect and run project build systems. |
 | **cache-components** | Next.js Cache Components and Partial Prerendering (PPR) guidance. |
 | **cc-dev-agent** | Claude Code development workflow optimization (context engineering, sub-agents, TDD). |
@@ -414,10 +415,10 @@ claude-forge/
   │   └── examples/              Opt-in .example samples for 21 lifecycle events (9)
   ├── knowledge/                 Knowledge base entries
   ├── reference/                 Reference docs (+ agent-schema.json)
-  ├── rules/                     Auto-loaded rule files (9)
+  ├── rules/                     Auto-loaded rule files (10)
   ├── scripts/                   Utility scripts
   ├── setup/                     Installation guides + CLAUDE.md template
-  ├── skills/                    Multi-step skill workflows (25, hybrid policy)
+  ├── skills/                    Multi-step skill workflows (26, hybrid policy)
   ├── install.sh                 macOS/Linux installer (--upgrade supported)
   ├── install.ps1                Windows installer (--upgrade supported)
   ├── mcp-servers.json           MCP server defaults (4 minimal)
@@ -514,7 +515,7 @@ cp setup/settings.local.template.json ~/.claude/settings.local.json
 |:--------|:-----------:|:----------------------:|:------------------:|
 | Specialist agents | 11 ready | Manual setup | Varies |
 | Slash commands | 34 ready | None | Per-plugin |
-| Skill workflows | 25 ready | None | Per-plugin |
+| Skill workflows | 26 ready | None | Per-plugin |
 | Safety hooks | 15 + 9 examples | None by default | Per-plugin |
 | External tool connections | 4 default (8+ optional) | None | Per-plugin |
 | Setup time | ~5 minutes | Hours | Per-plugin install |
@@ -544,7 +545,7 @@ Claude Code is Anthropic's official AI coding assistant that runs in your termin
 <details>
 <summary><strong>How is Claude Forge different from other Claude Code plugins?</strong></summary>
 
-Most Claude Code plugins solve one problem at a time. Claude Forge is a complete development environment — 11 agents, 34 commands, 25 skills, 15 hooks, and 9 rules that work together as a cohesive system. Instead of assembling individual plugins, you get a pre-wired pipeline: `/plan` feeds into `/tdd`, which feeds into `/code-review`, which feeds into `/handoff-verify`, which feeds into `/commit-push-pr`. The 6-layer security hook system also runs automatically without extra configuration.
+Most Claude Code plugins solve one problem at a time. Claude Forge is a complete development environment — 11 agents, 34 commands, 26 skills, 15 hooks, and 10 rules that work together as a cohesive system. Instead of assembling individual plugins, you get a pre-wired pipeline: `/plan` feeds into `/tdd`, which feeds into `/code-review`, which feeds into `/handoff-verify`, which feeds into `/commit-push-pr`. The 6-layer security hook system also runs automatically without extra configuration.
 
 </details>
 

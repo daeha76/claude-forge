@@ -52,9 +52,9 @@
 |:-----|:----:|:------------|
 | **에이전트**(agents) | 11개 | 분야별 전문 비서 — 기획, 테스트, 보안검토, 아키텍처(시스템 설계) 등 |
 | **커맨드**(commands) | 34개 | 자주 쓰는 작업 단축버튼 — `/plan`(계획), `/tdd`(테스트) 등 |
-| **스킬**(skills) | 25개 | AI가 익혀둔 작업 절차 — 루프 자동화, 팀 오케스트레이션 등 |
+| **스킬**(skills) | 26개 | AI가 익혀둔 작업 절차 — 루프 자동화, 팀 오케스트레이션 등 |
 | **훅**(hooks) | 15 + 예제 9개 | 자동 안전점검 — 위험한 명령 차단, API 키 유출 방지 등 |
-| **규칙**(rules) | 9개 | AI가 따르는 행동 지침 — 코딩 스타일, 보안, 깃 워크플로우 등 |
+| **규칙**(rules) | 10개 | AI가 따르는 행동 지침 — 코딩 스타일, 보안, 깃 워크플로우 등 |
 | **MCP**(외부 도구 연결) | 4개 | 브라우저 자동화, 문서 검색, 웹 읽기, 크롬 개발자 도구 |
 
 ---
@@ -104,10 +104,10 @@ Claude Code 세션 안에서 두 줄 입력:
 | 구성 요소 | 방법 A (`/plugin install`) | 방법 B (`./install.sh`) |
 |--------|:--------------------------:|:------------------------:|
 | 커맨드 (34개)          | ✅ | ✅ |
-| 스킬 (25개)            | ⚠️ 일부만                  | ✅ |
+| 스킬 (26개)            | ⚠️ 일부만                  | ✅ |
 | 에이전트 (11개)        | ❌ | ✅ |
 | 훅 (15개 + 예제 9개)   | ❌ | ✅ |
-| 규칙 (9개)             | ❌ | ✅ |
+| 규칙 (10개)             | ❌ | ✅ |
 | MCP 서버 (4개)         | ❌ | ✅ |
 | 상태바 (CC CHIPS)      | ❌ | ✅ (선택) |
 | settings.json 환경변수 | ❌ | ✅ |
@@ -553,10 +553,11 @@ You are an expert [역할]. Your mission is to [목표].
 </details>
 
 <details>
-<summary><strong>전체 스킬 목록 (25개)</strong></summary>
+<summary><strong>전체 스킬 목록 (26개)</strong></summary>
 
 | 스킬 | 설명 |
 |:-----|:-----|
+| `blind-spot-pass` | 낯선 분야 작업 전, 무엇을 모르는지조차 모르는 것(맹점)을 짚고 프롬프트할 만큼만 먼저 가르치는 사전 학습 |
 | `build-system` | 빌드 시스템 구성 및 관리 |
 | `cache-components` | 캐시 컴포넌트 패턴 |
 | `cc-dev-agent` | Claude Code 개발 에이전트 워크플로우 |
@@ -599,9 +600,9 @@ graph TB
     subgraph REPO["claude-forge (git 리포)"]
         A["agents/ (11)"]
         C["commands/ (34)"]
-        S["skills/ (25)"]
+        S["skills/ (26)"]
         H["hooks/ (15)"]
-        R["rules/ (9)"]
+        R["rules/ (10)"]
         SC["scripts/"]
         CC["cc-chips/"]
         K["knowledge/"]
@@ -649,10 +650,10 @@ claude-forge/
   │   └── examples/              21 lifecycle 이벤트 샘플 opt-in (9)
   ├── knowledge/                 지식 베이스
   ├── reference/                 참조 문서 (+ agent-schema.json)
-  ├── rules/                     자동 로드 규칙 파일 (9)
+  ├── rules/                     자동 로드 규칙 파일 (10)
   ├── scripts/                   유틸리티 스크립트
   ├── setup/                     설치 가이드 + CLAUDE.md 템플릿
-  ├── skills/                    다단계 스킬 워크플로우 (25, 하이브리드 정책)
+  ├── skills/                    다단계 스킬 워크플로우 (26, 하이브리드 정책)
   ├── install.sh                 macOS/Linux 설치 (--upgrade 지원)
   ├── install.ps1                Windows 설치 (--upgrade 지원)
   ├── mcp-servers.json           MCP 기본 설정 (4 minimal)
