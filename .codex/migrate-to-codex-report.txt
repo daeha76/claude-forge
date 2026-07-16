@@ -1,0 +1,15 @@
+Source inventory:
+  detected: .claude - primary source
+    dir: .claude/agent-memory
+Migration inventory:
+  inactive: instruction files - none found
+  inactive: skills - none found
+  inactive: command sources - none found
+  inactive: subagents - none found
+Migration surfaces:
+  inactive: AGENTS.md - No supported instruction file found.
+  inactive: skills - No skills found.
+  inactive: MCP config - No settings or MCP config found.
+  inactive: subagents - No subagents found.
+Migration report:
+  manual_fix_required: .claude-plugin/marketplace.json - Manual review required for Claude Code plugin marketplace; not converted by this tool.

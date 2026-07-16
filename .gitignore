@@ -32,3 +32,8 @@ venv/
 archive/
 reports/
 .claude/
+.claude/settings.local.json
+.codex/backups/
+.claude-session-imports/
+.claude/artifacts/
+.claude/work-log/
