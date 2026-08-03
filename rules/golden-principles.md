@@ -5,30 +5,51 @@ audience: team
 sensitivity: L1
 category: work-style
 critical: false
-description: 모든 컨텍스트 로드 핵심 원칙 12개 (불변성/시크릿/TDD/결론먼저/HARD-GATE 등)
+description: 모든 컨텍스트 로드 핵심 원칙 15개 (불변성/시크릿/TDD/결론먼저/HARD-GATE 등)
 ---
 # Golden Principles
 
 > 이 파일은 모든 컨텍스트에서 로드되는 핵심 원칙 요약이다.
-> 코딩 상세 규칙은 coding-style.md (코드 파일 작업 시 자동 로드).
+> 코딩 상세는 coding-style.md, **설계 판단(의존성 방향·공통화·경계)은 architecture.md** (둘 다 코드 파일 작업 시 자동 로드).
 
 | # | 원칙 | 핵심 | 상세 |
 |---|------|------|------|
 | 1 | 불변성 | spread로 새 객체. 원본 수정 금지 | coding-style.md |
-| 2 | 시크릿 환경 변수화 | `process.env`만, 미설정 시 throw | coding-style.md |
-| 3 | TDD | RED→GREEN→IMPROVE. 커버리지 80%+ | — |
+| 2 | 시크릿 환경 변수화 | `process.env`만, 미설정 시 throw | coding-style.md, security.md |
+| 3 | TDD | RED→GREEN→IMPROVE. 커버리지 80%+ | testing.md |
 | 4 | 결론 먼저 (CEO 브리핑) | 결론→파급("그로 인해 ~생길 수 있다")→근거→권고 4단 구조 | interaction.md |
-| 5 | 작은 파일/함수 | 800줄/50줄/중첩4단계 | coding-style.md |
+| 5 | 작은 파일/함수 | **파일 목표 300줄 / 경고 500줄 / 상한 800줄**, 함수 50줄, 중첩 4단계 | coding-style.md, architecture.md |
 | 6 | 경계 검증 | zod 입력 검증, 파라미터화 쿼리 | coding-style.md |
 | 7 | 비유로 설명 | 비유 1-2문장 먼저 → 기술 설명 | interaction.md |
-| 8 | 컨텍스트 임계 | **Opus 4.7 1M context 기준**: 30% 초과 시 서브에이전트 위임, plan.md 있으면 50%. 70%/85%는 200K 시절 stale 표현 (2026-05-08 1M 갱신). hook 자동 발동: `CTX_MONITOR_WINDOW=1000000 × CTX_MONITOR_THRESHOLD=30` = 300K | CLAUDE.md "자동 위임" |
-| 9 | HARD-GATE | 3파일+ 변경 **AND 핵심 로직/스키마/API 계약 변경 시** plan.md APPROVED 필수. 면제 (모두 AND 충족): ① 변경 파일 < 5 ② 변경 줄 < 100 ③ 핵심 로직/스키마/API 계약 미변경. 콘텐츠 작성·문서 sync·한 줄 fix는 자동 충족. 예외: auto-ship Stage 1 APPROVE 시 자동 전환 | CLAUDE.md L13, commands/sprint-contract.md, dev-team.md |
+| 8 | 컨텍스트 임계 | **Opus 5 (1M) 기준 30%(=300K) 초과 시 서브에이전트 위임**, plan.md 있으면 50%. 아래 "컨텍스트 임계의 의미" 참조 | — |
+| 9 | HARD-GATE | 3파일+ 변경 **AND 핵심 로직/스키마/API 계약 변경 시** plan.md APPROVED 필수. 면제 (모두 AND 충족): ① 변경 파일 < 5 ② 변경 줄 < 100 ③ 핵심 로직/스키마/API 계약 미변경. 콘텐츠 작성·문서 sync·한 줄 fix는 자동 충족 | — |
 | 10 | 증거 기반 완료 | 실행 결과 없이 완료 주장 금지 | verification.md |
 | 11 | SDD 리뷰 강제 | 서브에이전트 코드는 스펙 리뷰 필수 | — |
-| 12 | 수술적 변경 | 요청받은 줄만 변경. 인접 정리 금지 | — |
-| 13 | 메타 개선 | 동일 정정 2회+ 시 규칙 1줄 추가 권고 (`UserPromptSubmit` 훅 자동 감지) | meta-improvement.md |
-| 14 | 알림 훅 정책 | cooldown ≥ 30초 + timeout ≠ 0 + group 다층 키 + 토큰 가드 (`hook-guard.sh`) | notification-hooks.md |
-| 15 | launchctl 위생 | plist + 스크립트 동시 관리, exit 127 좀비 자동 검사 (cron 주 1회) | launchctl-hygiene.md |
+| 12 | 수술적 변경 | 요청받은 줄만 변경. 인접 정리 금지 | architecture.md §6 |
+| 13 | 메타 개선 | 동일 정정 2회+ 시 규칙 1줄 추가 권고 | — |
+| 14 | 알림 훅 정책 | cooldown ≥ 30초 + timeout ≠ 0 + group 다층 키 + 토큰 가드 | hooks/ |
+| 15 | launchctl 위생 | plist + 스크립트 동시 관리, exit 127 좀비 주기 검사 | setup/work-tracker-install.sh |
+
+## 컨텍스트 임계의 의미 (#8)
+
+비유: 책상이 넓어도 서류를 다 펼쳐두면 정작 필요한 장을 못 찾는다. 임계는 책상 크기가 아니라 **집중력** 이야기다.
+
+- **넘쳐도 세션은 안 죽는다.** 하네스가 자동으로 요약(compaction)한다. 임계의 목적은 생존이 아니라 **품질과 비용**이다.
+- **품질**: 컨텍스트가 길어질수록 초반 지시가 묻히고, 요약 과정에서 세부가 날아간다.
+- **비용**: 매 턴 전체 컨텍스트를 다시 읽는다. 300K를 넘긴 채 20턴을 돌면 대량 탐색 결과가 계속 청구된다.
+- **그래서**: 대량 파일 탐색·전수 검색·긴 로그 분석은 **서브에이전트에 위임**하고 결론만 받는다. 메인 컨텍스트는 결정과 코드에만 쓴다.
+- plan.md가 있으면 50%까지 허용 — 계획이 이미 맥락을 압축해 두었으므로.
+
+## 파일 크기 기준의 근거 (#5)
+
+실측(dongil-bms-web, 902개 파일): 중앙값 **123줄**, p90 323줄, 800줄 초과 **0.7%(6개)**.
+800줄 단일 기준은 사실상 아무것도 걸러내지 못한다. 3단 기준으로 바꾼 이유다.
+
+- **300줄 목표** — 이미 88%가 충족. 넘으면 분할을 *검토*
+- **500줄 경고** — 상위 3%. 분할 근거를 설명할 수 있어야 함
+- **800줄 상한** — 넘기면 분할이 이번 작업 범위. 단, 기존 부채는 #12에 따라 분리 처리
+
+분할 *방법*은 architecture.md(의존성 방향·공통화 판단)를 따른다. 줄 수는 신호이지 기준이 아니다.
 
 ## 날짜 계산 (CRITICAL)
 
@@ -37,6 +58,4 @@ deny 규칙의 python3 제한은 os/shutil 등 시스템 모듈 대상. datetime
 
 ## CRITICAL 라벨 정의
 
-`(CRITICAL)`이 붙은 항목은 위반 시 **데이터 손실 / 보안 사고 / 법적 리스크 / 비용 폭주** 중 하나가 발생하는 규칙이다. `IMPORTANT`보다 한 단계 위. 의문이 들면 사용자 확인 먼저, 합리화 금지.
-
-**현재 사용처 (33회 / 26 rules)**: `data-policy` `mcp-token-policy` `image-provider-routing` `email` `saju-file-management` `fastcampus-qa-bot` `civil-law` `mediation` `labor-consultant` `chrome-devtools` `design-extract` `interaction` `verification` `agents-v2` `supabase-mcp` `gws` `personal-os` `sync-all` `first-principles` `performance-marketing` `research` `notion-idempotency` `ledger-sync-protocol` `html-to-pdf-fonts` `default-font-pretendard`. 각 rules의 `(CRITICAL)` 라벨은 본 정의를 적용한다.
+`(CRITICAL)`이 붙은 항목은 위반 시 **데이터 손실 / 보안 사고 / 법적 리스크 / 비용 폭주** 중 하나가 발생하는 규칙이다. `IMPORTANT`보다 한 단계 위. 의문이 들면 사용자 확인 먼저, 합리화 금지. 각 rules의 `(CRITICAL)` 라벨은 본 정의를 적용한다.

@@ -26,6 +26,13 @@ if (!apiKey) {
 }
 ```
 
+**서버 전용 키는 클라이언트 번들에 절대 넣지 않는다** (공급자 무관). `NEXT_PUBLIC_*`,
+`VITE_*` 등 빌드 타임에 인라인되는 접두사에 서버 키를 두면 정적 파일로 배포된다.
+서버 키는 서버 경계(`.server.ts`·서버 액션·API 라우트) 안에서만 읽는다.
+
+> DB 인가(RLS)·키 격리 상세: Supabase 프로젝트는 `security-supabase.md` 자동 로드
+> (`supabase/**`, `**/migrations/**`, `**/*.sql` 경로에서 발동)
+
 ## Security Response Protocol
 
 If security issue found:
