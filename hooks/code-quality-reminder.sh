@@ -1,6 +1,6 @@
 #!/bin/bash
 # code-quality-reminder.sh - PostToolUse Hook (Edit/Write)
-# 코드 수정 후 품질 체크 리마인더를 stderr로 출력
+# 코드 수정 후 품질 + 설계 체크 리마인더를 stderr로 출력
 # Claude에게 셀프 체크를 유도하는 간결한 메시지
 # exit 0 필수 (세션 방해 금지)
 
@@ -38,6 +38,7 @@ case "$FILE_PATH" in
         ;;
 esac
 
-echo "[code-quality] 수정된 파일의 에러 핸들링, 불변성 패턴, 입력 검증을 확인하세요." >&2
+echo "[code-quality] 품질: 에러 핸들링·불변성 패턴·입력 검증을 확인하세요." >&2
+echo "[code-quality] 설계: 도메인 코드가 DB·프레임워크를 import 하지 않는가 / 중복은 3번째부터 합치는가 (rules/architecture.md §1-2)." >&2
 
 exit 0
