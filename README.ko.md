@@ -530,6 +530,7 @@ You are an expert [역할]. Your mission is to [목표].
 | `/init-project` | 프로젝트 초기 설정 |
 | `/learn` | 학습 및 지식 축적 |
 | `/loop-forge` | 반복 작업을 재사용 가능한 자가검증 슬래시 명령으로 박제 |
+| `/next-prompt` | 지금 대화 맥락을 새 세션용 인계 프롬프트로 압축 |
 | `/next-task` | 다음 작업 할당 |
 | `/orchestrate` | Agent Teams 멀티 에이전트 구성 |
 | `/plan` | AI가 구현 계획을 세워줍니다 |

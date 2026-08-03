@@ -185,6 +185,7 @@ Here is everything bundled in Claude Forge, explained in plain language:
 | `/explore` | Navigate and analyze codebase structure. |
 | `/build-fix` | Incrementally fix TypeScript and build errors. |
 | `/next-task` | Recommend next task based on project state. |
+| `/next-prompt` | Compress the current conversation into a handoff prompt for a fresh session. |
 | `/suggest-automation` | Analyze repetitive patterns and suggest automation. |
 
 #### Security

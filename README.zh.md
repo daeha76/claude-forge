@@ -401,6 +401,7 @@ cp setup/settings.local.template.json ~/.claude/settings.local.json
 | `/explore` | 导航和分析代码库结构 |
 | `/build-fix` | 逐步修复 TypeScript 和构建错误 |
 | `/next-task` | 根据项目当前状态推荐下一步任务 |
+| `/next-prompt` | 将当前对话上下文压缩为可用于新会话的交接提示词 |
 | `/suggest-automation` | 分析重复操作模式并建议自动化方案 |
 
 #### 安全
